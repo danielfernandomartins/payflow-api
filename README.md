@@ -191,7 +191,8 @@ Cenários cobertos nos testes:
 
 Desenvolvido por **Daniel Fernando Martins**  
 - Email: [dfernandom@outlook.com](mailto:dfernandom@outlook.com)  
-- GitHub: [github.com/Daniel-F-Martins](https://github.com/Daniel-F-Martins) *(ajuste com seu link de perfil)*  
+- GitHub: [github.com/danielfernandomartins](https://github.com/danielfernandomartins)  
+- Repositório: [payflow-api](https://github.com/danielfernandomartins/payflow-api)  
 
 ---
 
