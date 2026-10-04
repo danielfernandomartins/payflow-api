@@ -6,11 +6,11 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=flat&logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **PayFlow API** é um motor de pagamentos e carteira digital de alta consistência transacional e baixa latência, projetado com **Java 21** e **Spring Boot 3.3**, seguindo os princípios de **Clean Architecture**, **SOLID** e padrões corporativos para prevenção de concorrência e *double spending*.
+> **PayFlow API** é um projeto de carteira digital e transferências criado para aplicar regras de negócio financeiras em uma API moderna com **Java 21**, **Spring Boot 3.3** e **PostgreSQL**. O foco é demonstrar consistência transacional, validações, integração entre serviços e testes automatizados.
 
 ---
 
-## 🎯 Destaques do Projeto (Recruiter & Tech Lead Showcase)
+## 🎯 Valor do projeto
 
 - 🔒 **Concorrência Segura & Prevenção de Deadlocks**: Implementação de *Pessimistic Write Lock* (`@Lock(LockModeType.PESSIMISTIC_WRITE)`) com ordenação determinística de identificadores de carteiras para evitar condições de corrida (*race conditions*) em transações simultâneas.
 - 📐 **Domain-Driven Design (DDD) & Clean Architecture**: Separação clara entre Domínio, Camada de Serviço, Repositórios e DTOs imutáveis baseados em **Java Records**.
@@ -52,6 +52,12 @@ sequenceDiagram
     Service-->>Controller: TransferResponse (201 Created)
     Controller-->>Cliente: JSON com status SUCCESS e dados da transação
 ```
+
+---
+
+## 💼 Contexto de negócio
+
+O projeto simula desafios comuns em meios de pagamento: validação de perfil de usuário, saldo disponível, autorização externa, consistência de transferências e rastreabilidade das operações. Isso aproxima conceitos de engenharia de software de problemas encontrados em serviços financeiros.
 
 ---
 
