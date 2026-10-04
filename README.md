@@ -55,6 +55,14 @@ sequenceDiagram
 
 ---
 
+## Como explicar em entrevista
+
+> "O PayFlow é meu projeto mais completo para mostrar raciocínio operacional. Uma transferência depende de entrada válida, regras, banco e serviços externos. Se algo falha, eu sigo o fluxo e isolo a causa por etapa."
+
+📘 [Ver playbook de suporte](SUPPORT-PLAYBOOK.md)
+
+---
+
 ## 💼 Contexto de negócio
 
 O projeto simula desafios comuns em meios de pagamento: validação de perfil de usuário, saldo disponível, autorização externa, consistência de transferências e rastreabilidade das operações. Isso aproxima conceitos de engenharia de software de problemas encontrados em serviços financeiros.
