@@ -6,28 +6,33 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=flat&logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **PayFlow API** é um projeto de carteira digital e transferências criado para aplicar regras de negócio financeiras em uma API moderna com **Java 21**, **Spring Boot 3.3** e **PostgreSQL**. O foco é demonstrar consistência transacional, validações, integração entre serviços e testes automatizados.
+> **PayFlow API** é meu principal case de engenharia aplicada a serviços financeiros: uma carteira digital com transferências, regras de negócio, concorrência, integração externa, persistência, tratamento de falhas e testes automatizados.
 
 ---
 
-## 🎯 Valor do projeto
+## 💼 Problema de negócio
 
-- 🔒 **Concorrência Segura & Prevenção de Deadlocks**: Implementação de *Pessimistic Write Lock* (`@Lock(LockModeType.PESSIMISTIC_WRITE)`) com ordenação determinística de identificadores de carteiras para evitar condições de corrida (*race conditions*) em transações simultâneas.
-- 📐 **Domain-Driven Design (DDD) & Clean Architecture**: Separação clara entre Domínio, Camada de Serviço, Repositórios e DTOs imutáveis baseados em **Java Records**.
-- 🚦 **Regras de Negócio Diferenciadas**:
-  - Usuários Comuns (`COMMON`): Podem enviar e receber transferências financeiras.
-  - Lojistas (`MERCHANT`): Apenas recebem valores de transferências, não podendo enviar.
-  - Validação estrita de saldo em conta antes de qualquer débito.
-- 🌐 **Tratamento de Exceções RFC 7807**: Respostas de erro padronizadas globalmente via `ProblemDetail` do Spring Boot 3.
-- ⚡ **Notificações Assíncronas**: Envio desacoplado e não bloqueante de notificações de transferência via `@Async` com *ThreadPoolTaskExecutor* configurável.
-- 🛡️ **Resiliência Externa**: Integração com serviço autorizador externo via `RestClient` do Spring 6 com estratégia de fallback defensivo.
-- 📦 **Database Versioning**: Migrações automatizadas de banco de dados gerenciadas com **Flyway**.
-- 🐳 **Pronto para Nuvem/Contêineres**: `Dockerfile` multi-stage otimizado e `docker-compose.yml` integrando PostgreSQL 16 e pgAdmin 4.
-- 🧪 **Cobertura de Testes Automatizados**: Testes unitários com JUnit 5 + Mockito + AssertJ e testes de integração de API com MockMvc.
+Sistemas de pagamentos precisam garantir que uma transferência respeite regras de perfil, saldo, autorização e consistência mesmo quando várias operações acontecem ao mesmo tempo ou quando serviços externos falham.
+
+O objetivo deste projeto é transformar esse problema em uma API verificável e tecnicamente defensável.
 
 ---
 
-## 🔄 Fluxo de Transferência (Sequence Diagram)
+## 🎯 O que o projeto demonstra
+
+- 🔒 **Concorrência e prevenção de deadlocks** com *Pessimistic Write Lock* (`@Lock(LockModeType.PESSIMISTIC_WRITE)`) e ordenação determinística de carteiras.
+- 📐 **Separação de responsabilidades** entre domínio, serviços, repositórios e DTOs com Java Records.
+- 🚦 **Regras de negócio financeiras** para usuários `COMMON` e `MERCHANT`, saldo e transferências.
+- 🌐 **Tratamento padronizado de erros** com RFC 7807 / `ProblemDetail`.
+- ⚡ **Notificações assíncronas** via `@Async` e `ThreadPoolTaskExecutor`.
+- 🛡️ **Integração resiliente** com serviço autorizador externo via `RestClient`.
+- 📦 **Versionamento de banco** com Flyway.
+- 🐳 **Execução containerizada** com Docker e Docker Compose.
+- 🧪 **Testes unitários e de integração** com JUnit 5, Mockito, AssertJ e MockMvc.
+
+---
+
+## 🔄 Fluxo de transferência
 
 ```mermaid
 sequenceDiagram
@@ -35,120 +40,127 @@ sequenceDiagram
     actor Cliente as Cliente / App
     participant Controller as TransferController
     participant Service as TransferService
-    participant DB as PostgreSQL (Locks & DB)
+    participant DB as PostgreSQL
     participant Auth as Serviço Autorizador
     participant Notify as Notificação Assíncrona
 
-    Cliente->>Controller: POST /api/v1/transfers {payerId, payeeId, value}
-    Controller->>Service: transfer(TransferRequest)
-    Note over Service: Valida auto-transferência e perfil (Lojista não envia)
-    Service->>DB: Adquire Pessimistic Lock ordenado nas carteiras
-    Note over Service: Valida saldo da carteira do pagador
-    Service->>Auth: Consulta Autorizador Externo
-    Auth-->>Service: Transação Autorizada (200 OK)
-    Service->>DB: Debita Payer, Credita Payee e Salva Transação
-    DB-->>Service: Commit com Sucesso
-    Service--)Notify: Disparo de evento assíncrono (@Async)
-    Service-->>Controller: TransferResponse (201 Created)
-    Controller-->>Cliente: JSON com status SUCCESS e dados da transação
+    Cliente->>Controller: POST /api/v1/transfers
+    Controller->>Service: transfer(request)
+    Note over Service: valida auto-transferência e perfil
+    Service->>DB: adquire locks ordenados
+    Note over Service: valida saldo
+    Service->>Auth: consulta autorização externa
+    Auth-->>Service: autorizado
+    Service->>DB: débito + crédito + transação
+    DB-->>Service: commit
+    Service--)Notify: dispara notificação
+    Service-->>Controller: TransferResponse
+    Controller-->>Cliente: 201 Created
 ```
 
 ---
 
-## Como explicar em entrevista
+## 🧠 Decisões técnicas importantes
 
-> "O PayFlow é meu projeto mais completo para mostrar raciocínio operacional. Uma transferência depende de entrada válida, regras, banco e serviços externos. Se algo falha, eu sigo o fluxo e isolo a causa por etapa."
+### Lock pessimista
 
-📘 [Ver playbook de suporte](SUPPORT-PLAYBOOK.md)
+Uma transferência concorrente pode tentar alterar duas carteiras simultaneamente. O projeto utiliza lock pessimista para reduzir o risco de inconsistência durante a atualização de saldo.
+
+### Ordem determinística das carteiras
+
+As carteiras são bloqueadas em ordem previsível para reduzir risco de deadlock quando transações concorrentes envolvem os mesmos participantes em ordem inversa.
+
+### Serviço autorizador externo
+
+A autorização é tratada como dependência externa e, portanto, como possível ponto de falha. O fluxo separa regra local, integração e persistência para facilitar diagnóstico e evolução.
+
+### Notificação fora do caminho crítico
+
+A notificação é executada de forma assíncrona para não tornar uma dependência secundária parte desnecessária do tempo de resposta principal da transferência.
 
 ---
 
-## 💼 Contexto de negócio
+## 💬 Como explicar em entrevista
 
-O projeto simula desafios comuns em meios de pagamento: validação de perfil de usuário, saldo disponível, autorização externa, consistência de transferências e rastreabilidade das operações. Isso aproxima conceitos de engenharia de software de problemas encontrados em serviços financeiros.
+> "No PayFlow procurei tratar uma transferência como um problema de consistência de negócio, não apenas como um CRUD. O ponto mais importante foi pensar em concorrência, ordem de locks, regras por perfil, falhas externas e testes. Isso me permite discutir não só código, mas também trade-offs e riscos de uma operação financeira."
+
+Perguntas que este projeto permite discutir:
+
+- Por que usar lock pessimista neste cenário?
+- Como reduzir risco de deadlock?
+- Onde entraria idempotência?
+- Como impedir transferência duplicada por retry do cliente?
+- O que acontece quando o autorizador externo fica indisponível?
+- Como evoluir notificações para mensageria?
+- Como observar falhas e latência em produção?
+
+📘 [Playbook de investigação de falhas](SUPPORT-PLAYBOOK.md)
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Tecnologias utilizadas
 
-- **Java 21 (LTS)** (Virtual Threads ready, Records, Pattern Matching)
+- **Java 21**
 - **Spring Boot 3.3.4**
-- **Spring Data JPA & Hibernate**
-- **Flyway Migration**
-- **PostgreSQL 16** & **H2 Database** (para testes e ambiente de desenvolvimento rápido)
-- **SpringDoc OpenAPI 3 / Swagger UI**
+- **Spring Data JPA / Hibernate**
+- **PostgreSQL 16**
+- **H2** para testes e desenvolvimento
+- **Flyway**
+- **SpringDoc OpenAPI / Swagger UI**
 - **Jakarta Bean Validation**
-- **JUnit 5, Mockito & AssertJ**
-- **Docker & Docker Compose**
+- **JUnit 5, Mockito, AssertJ e MockMvc**
+- **Docker e Docker Compose**
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 🚀 Como executar
 
 ### Pré-requisitos
-- **Java 21** instalado (ou utilize o ambiente Docker)
-- **Maven 3.9+** (ou execute via wrapper)
-- *(Opcional)* **Docker & Docker Compose**
 
-### Opção 1: Executando Localmente (Perfil Dev com H2)
-O projeto vem configurado por padrão com o banco em memória H2 e migrações Flyway já populadas:
+- Java 21
+- Maven 3.9+
+- Docker e Docker Compose (opcional)
+
+### Ambiente local com H2
 
 ```bash
-# Compilar e executar os testes
 mvn clean test
-
-# Iniciar a aplicação
 mvn spring-boot:run
 ```
 
-A API estará disponível em: `http://localhost:8080`  
-Documentação interativa Swagger: **`http://localhost:8080/swagger-ui.html`**  
-Console H2: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:payflowdb`, Usuário: `sa`, Senha: em branco)
+API: `http://localhost:8080`  
+Swagger: `http://localhost:8080/swagger-ui.html`  
+H2 Console: `http://localhost:8080/h2-console`
 
----
-
-### Opção 2: Executando via Docker Compose (PostgreSQL em Produção)
-
-Para subir a aplicação completa com PostgreSQL 16 e painel pgAdmin:
+### Ambiente com PostgreSQL
 
 ```bash
 docker compose up --build -d
 ```
 
-- **API:** `http://localhost:8080`
-- **pgAdmin:** `http://localhost:5050` (Email: `admin@payflow.com` | Senha: `admin`)
+API: `http://localhost:8080`  
+pgAdmin: `http://localhost:5050`
 
 ---
 
-## 📖 Endpoints da API (RESTful)
+## 📖 Endpoints
 
-### 1. Usuários (`/api/v1/users`)
+### Usuários — `/api/v1/users`
+
 | Método | Endpoint | Descrição |
 |---|---|---|
-| `POST` | `/api/v1/users` | Cadastra novo usuário (`COMMON` ou `MERCHANT`) e provisiona carteira |
+| `POST` | `/api/v1/users` | Cadastra usuário e provisiona carteira |
 | `GET` | `/api/v1/users/{id}` | Busca usuário por ID |
-| `GET` | `/api/v1/users` | Lista todos os usuários cadastrados |
+| `GET` | `/api/v1/users` | Lista usuários |
 
-#### Exemplo de Payload - Cadastro de Usuário:
-```json
-{
-  "fullName": "Mariana Costa",
-  "document": "12345678910",
-  "email": "mariana.costa@email.com",
-  "password": "SenhaSegura@123",
-  "userType": "COMMON",
-  "initialBalance": 1000.00
-}
-```
+### Transferências — `/api/v1/transfers`
 
----
-
-### 2. Transferências (`/api/v1/transfers`)
 | Método | Endpoint | Descrição |
 |---|---|---|
-| `POST` | `/api/v1/transfers` | Executa transferência financeira atômica entre carteiras |
+| `POST` | `/api/v1/transfers` | Executa transferência entre carteiras |
 
-#### Exemplo de Payload - Transferência:
+Exemplo:
+
 ```json
 {
   "payerId": 1,
@@ -157,59 +169,53 @@ docker compose up --build -d
 }
 ```
 
-#### Resposta de Sucesso (`201 Created`):
-```json
-{
-  "transactionId": 1,
-  "payerId": 1,
-  "payerName": "Alice Silva",
-  "payeeId": 2,
-  "payeeName": "Bob Santos",
-  "amount": 150.00,
-  "status": "SUCCESS",
-  "message": "Transferência realizada com sucesso!",
-  "timestamp": "2026-09-30T20:30:00"
-}
-```
+### Carteiras — `/api/v1/wallets`
 
----
-
-### 3. Carteiras & Extrato (`/api/v1/wallets`)
 | Método | Endpoint | Descrição |
 |---|---|---|
-| `GET` | `/api/v1/wallets/users/{userId}` | Consulta saldo e dados da carteira do usuário |
-| `POST` | `/api/v1/wallets/deposit` | Realiza aporte de capital / depósito em uma carteira |
-| `GET` | `/api/v1/wallets/users/{userId}/statement` | Retorna o extrato de movimentações do usuário |
+| `GET` | `/api/v1/wallets/users/{userId}` | Consulta carteira |
+| `POST` | `/api/v1/wallets/deposit` | Realiza depósito |
+| `GET` | `/api/v1/wallets/users/{userId}/statement` | Consulta extrato |
 
 ---
 
-## 🧪 Executando os Testes Automatizados
-
-O projeto conta com testes unitários focados nas regras de negócio e testes de integração com MockMvc:
+## 🧪 Testes automatizados
 
 ```bash
 mvn test
 ```
 
-Cenários cobertos nos testes:
-- ✅ Transferência bem-sucedida entre usuários comuns
-- 🚫 Bloqueio de lojista tentando enviar transferência
-- 🚫 Bloqueio de auto-transferência para a mesma conta
-- 🚫 Rejeição de transação por saldo insuficiente
-- 🚫 Transação marcada como `FAILED` caso o autorizador externo recuse
-- 🛡️ Validação de formato de requisição via MockMvc
+Cenários cobertos incluem:
+
+- transferência bem-sucedida;
+- lojista impedido de enviar valores;
+- bloqueio de auto-transferência;
+- saldo insuficiente;
+- recusa do autorizador externo;
+- validação de requisições via MockMvc.
+
+---
+
+## 🔭 Próximas evoluções
+
+As próximas melhorias de maior valor seriam:
+
+1. idempotency key para transferências;
+2. testes específicos de concorrência;
+3. observabilidade com métricas e tracing;
+4. autenticação/autorização;
+5. eventos de domínio ou mensageria para notificações;
+6. pipeline CI completo.
 
 ---
 
 ## 👨‍💻 Autor
 
-Desenvolvido por **Daniel Fernando Martins**  
-- Email: [dfernandom@outlook.com](mailto:dfernandom@outlook.com)  
-- GitHub: [github.com/danielfernandomartins](https://github.com/danielfernandomartins)  
-- Repositório: [payflow-api](https://github.com/danielfernandomartins/payflow-api)  
+**Daniel Fernando Martins**  
+[LinkedIn](https://www.linkedin.com/in/danielfernandomartins) · [GitHub](https://github.com/danielfernandomartins) · [E-mail](mailto:dfernandom@outlook.com)
 
 ---
 
 ## 📄 Licença
 
-Distribuído sob a licença [MIT](LICENSE). Consulte o arquivo `LICENSE` para obter mais informações.
+Distribuído sob a licença [MIT](LICENSE).
