@@ -6,7 +6,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=flat&logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **PayFlow API** é meu principal case de engenharia aplicada a serviços financeiros: uma carteira digital com transferências, regras de negócio, concorrência, integração externa, persistência, tratamento de falhas e testes automatizados.
+> **PayFlow API** é um projeto de estudo de carteira digital para explorar regras de negócio de transferências e sua tradução em uma solução de tecnologia. Complementa meu portfólio para **Analista de Negócios**, com foco em restrições por perfil, saldo, autorização e cenários de exceção.
 
 ---
 
@@ -18,7 +18,19 @@ O objetivo deste projeto é transformar esse problema em uma API verificável e 
 
 ---
 
-## 🎯 O que o projeto demonstra
+## Análise de Negócios aplicada ao projeto
+
+| Necessidade do negócio | Regra ou comportamento documentado | Discussão de validação |
+|---|---|---|
+| Respeitar permissões de cada perfil | Lojistas não enviam transferências | Conferir tentativa de envio por lojista |
+| Preservar o saldo disponível | Recusar transferência sem saldo suficiente | Comparar valor solicitado e saldo |
+| Evitar operações incoerentes | Impedir transferência para a própria carteira | Conferir pagador e recebedor iguais |
+| Respeitar autorização externa | Condicionar a transferência à autorização | Avaliar recusa e indisponibilidade |
+| Manter consistência financeira | Atualizar débito, crédito e registro da operação | Discutir falhas e operações simultâneas |
+
+Esta leitura organiza o escopo descrito no projeto; não representa homologação com usuários de negócio. Idempotência, autenticação e testes específicos de concorrência permanecem entre as evoluções propostas abaixo. O estudo não representa uma solução bancária em produção.
+
+## 🎯 Implementação de apoio
 
 - 🔒 **Concorrência e prevenção de deadlocks** com *Pessimistic Write Lock* (`@Lock(LockModeType.PESSIMISTIC_WRITE)`) e ordenação determinística de carteiras.
 - 📐 **Separação de responsabilidades** entre domínio, serviços, repositórios e DTOs com Java Records.
